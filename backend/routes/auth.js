@@ -4,7 +4,6 @@ const jwt = require('jsonwebtoken');
 const User = require('../models/User');
 const Organization = require('../models/Organization');
 
-// Register Student
 router.post('/register/student', async (req, res) => {
   try {
     const { name, email, password, studentId, category, organization, phone } = req.body;
@@ -47,7 +46,6 @@ router.post('/register/student', async (req, res) => {
   }
 });
 
-// Register Organization Admin
 router.post('/register/organization', async (req, res) => {
   try {
     const { name, email, password, address, messParameters } = req.body;
@@ -84,7 +82,6 @@ router.post('/register/organization', async (req, res) => {
   }
 });
 
-// Login
 router.post('/login', async (req, res) => {
   try {
     const { email, password, role } = req.body;

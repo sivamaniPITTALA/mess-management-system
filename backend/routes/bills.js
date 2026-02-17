@@ -6,7 +6,6 @@ const User = require('../models/User');
 const Organization = require('../models/Organization');
 const auth = require('../middleware/auth');
 
-// Get user's bills
 router.get('/my-bills', auth, async (req, res) => {
   try {
     const bills = await Bill.find({ user: req.user.id })
@@ -18,7 +17,6 @@ router.get('/my-bills', auth, async (req, res) => {
   }
 });
 
-// Get current month's bill
 router.get('/current', auth, async (req, res) => {
   try {
     const now = new Date();
@@ -32,7 +30,6 @@ router.get('/current', auth, async (req, res) => {
     }).populate('organization', 'name messParameters');
 
     if (!bill) {
-      // Generate new bill
       const user = await User.findById(req.user.id).populate('organization', 'messParameters');
       const meals = await Meal.find({
         user: req.user.id,
@@ -52,7 +49,6 @@ router.get('/current', auth, async (req, res) => {
   }
 });
 
-// Generate bill for a month
 router.post('/generate/:month/:year', auth, async (req, res) => {
   try {
     const { month, year } = req.params;
@@ -76,7 +72,6 @@ router.post('/generate/:month/:year', auth, async (req, res) => {
   }
 });
 
-// Pay bill
 router.post('/pay', auth, async (req, res) => {
   try {
     const { billId, amount, method } = req.body;
@@ -110,7 +105,6 @@ router.post('/pay', auth, async (req, res) => {
   }
 });
 
-// Get all bills (admin)
 router.get('/all', auth, async (req, res) => {
   try {
     const { month, year } = req.query;
@@ -132,7 +126,6 @@ router.get('/all', auth, async (req, res) => {
   }
 });
 
-// Helper function to generate bill
 async function generateBill(user, meals, month, year) {
   const org = user.organization;
   const params = org.messParameters;
@@ -154,8 +147,6 @@ async function generateBill(user, meals, month, year) {
   let semesterHostelFee = 0;
   let isSemesterFeeApplied = false;
 
-  // Assuming semester starts from month 1 (January) or 7 (July)
-  // 6th month would be June or December
   const semesterMonths = [6, 12];
   const category = user.category;
 
@@ -164,7 +155,6 @@ async function generateBill(user, meals, month, year) {
       semesterHostelFee = params.semesterHostelFee;
       isSemesterFeeApplied = true;
     } else if (category === 'SC' || category === 'ST' || category === 'PwD') {
-      // 100% waiver for SC/ST/PwD
       semesterHostelFee = 0;
       isSemesterFeeApplied = true;
     }

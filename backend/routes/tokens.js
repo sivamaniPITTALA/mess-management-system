@@ -7,7 +7,6 @@ const QRCode = require('qrcode');
 const { v4: uuidv4 } = require('uuid');
 const auth = require('../middleware/auth');
 
-// Generate token for meal
 router.post('/generate', auth, async (req, res) => {
   try {
     const { mealType, specials, paymentType } = req.body;
@@ -24,7 +23,6 @@ router.post('/generate', auth, async (req, res) => {
     const org = user.organization;
     const params = org.messParameters;
 
-    // Calculate amount based on meal type
     let rate = 0;
     switch (mealType) {
       case 'breakfast':
@@ -41,7 +39,6 @@ router.post('/generate', auth, async (req, res) => {
     const specialRate = (specials || 0) * params.specialItemRate;
     const totalAmount = rate + specialRate;
 
-    // Generate unique token
     const tokenString = uuidv4();
 
     const token = new Token({
@@ -56,7 +53,6 @@ router.post('/generate', auth, async (req, res) => {
 
     await token.save();
 
-    // Generate QR code
     const qrCode = await QRCode.toDataURL(tokenString);
 
     res.status(201).json({
@@ -74,7 +70,6 @@ router.post('/generate', auth, async (req, res) => {
   }
 });
 
-// Validate and use token (admin scan)
 router.post('/validate', auth, async (req, res) => {
   try {
     const { tokenString } = req.body;
@@ -108,12 +103,10 @@ router.post('/validate', auth, async (req, res) => {
       return res.status(400).json({ valid: false, message: 'User card is not active' });
     }
 
-    // Mark token as used
     token.status = 'used';
     token.usedAt = new Date();
     await token.save();
 
-    // Record the meal
     const meal = new Meal({
       user: token.user._id,
       organization: token.organization._id,
@@ -145,7 +138,6 @@ router.post('/validate', auth, async (req, res) => {
   }
 });
 
-// Get user's active tokens
 router.get('/my-tokens', auth, async (req, res) => {
   try {
     const tokens = await Token.find({ 
@@ -159,7 +151,6 @@ router.get('/my-tokens', auth, async (req, res) => {
   }
 });
 
-// Get token by string (for QR lookup)
 router.get('/lookup/:tokenString', async (req, res) => {
   try {
     const token = await Token.findOne({ token: req.params.tokenString })

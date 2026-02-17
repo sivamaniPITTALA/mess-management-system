@@ -3,7 +3,6 @@ const router = express.Router();
 const Meal = require('../models/Meal');
 const auth = require('../middleware/auth');
 
-// Get user's meal history
 router.get('/my-meals', auth, async (req, res) => {
   try {
     const { startDate, endDate } = req.query;
@@ -26,7 +25,6 @@ router.get('/my-meals', auth, async (req, res) => {
   }
 });
 
-// Get meals by date (admin)
 router.get('/by-date', auth, async (req, res) => {
   try {
     const { date } = req.query;
@@ -51,7 +49,6 @@ router.get('/by-date', auth, async (req, res) => {
   }
 });
 
-// Get meal statistics
 router.get('/stats', auth, async (req, res) => {
   try {
     const { month, year } = req.query;
