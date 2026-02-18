@@ -23,27 +23,22 @@ router.get('/current', auth, async (req, res) => {
     const month = now.getMonth() + 1;
     const year = now.getFullYear();
 
-    const bill = await Bill.findOne({ 
-      user: req.user.id,
-      month,
-      year
-    }).populate('organization', 'name messParameters');
-
-    if (!bill) {
-      const user = await User.findById(req.user.id).populate('organization', 'messParameters');
-      const meals = await Meal.find({
-        user: req.user.id,
-        timestamp: {
-          $gte: new Date(year, month - 1, 1),
-          $lt: new Date(year, month, 1)
-        }
-      });
-
-      const newBill = await generateBill(user, meals, month, year);
-      return res.json(newBill);
+    const user = await User.findById(req.user.id).populate('organization', 'messParameters');
+    if (!user || !user.organization) {
+      return res.status(404).json({ message: 'User organization not found' });
     }
 
-    res.json(bill);
+    const meals = await Meal.find({
+      user: req.user.id,
+      timestamp: {
+        $gte: new Date(year, month - 1, 1),
+        $lt: new Date(year, month, 1)
+      }
+    });
+
+    const currentBill = await generateBill(user, meals, month, year);
+    const populatedBill = await Bill.findById(currentBill._id).populate('organization', 'name messParameters');
+    res.json(populatedBill);
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
@@ -161,6 +156,17 @@ async function generateBill(user, meals, month, year) {
   }
 
   const total = subtotal + semesterHostelFee;
+  const calculateTotalsFromPayments = (existingBill) => {
+    const totalPaid = (existingBill.paymentHistory || []).reduce((sum, payment) => sum + (payment.amount || 0), 0);
+    const dueAmount = Math.max(total - totalPaid, 0);
+    let paymentStatus = 'pending';
+    if (totalPaid >= total && total > 0) {
+      paymentStatus = 'paid';
+    } else if (totalPaid > 0 && totalPaid < total) {
+      paymentStatus = 'partial';
+    }
+    return { totalPaid, dueAmount, paymentStatus };
+  };
 
   // Check if bill already exists
   let bill = await Bill.findOne({
@@ -183,7 +189,17 @@ async function generateBill(user, meals, month, year) {
     bill.total = total;
     bill.isSemesterFeeApplied = isSemesterFeeApplied;
     bill.category = category;
+    const paymentSummary = calculateTotalsFromPayments(bill);
+    bill.dueAmount = paymentSummary.dueAmount;
+    bill.paymentStatus = paymentSummary.paymentStatus;
+    if (paymentSummary.paymentStatus === 'paid' && !bill.paidAt) {
+      bill.paidAt = new Date();
+    }
+    if (paymentSummary.paymentStatus !== 'paid') {
+      bill.paidAt = undefined;
+    }
   } else {
+    const initialDueAmount = Math.max(total, 0);
     bill = new Bill({
       user: user._id,
       organization: org._id,
@@ -202,7 +218,7 @@ async function generateBill(user, meals, month, year) {
       total,
       category,
       isSemesterFeeApplied,
-      dueAmount: total
+      dueAmount: initialDueAmount
     });
   }
 
